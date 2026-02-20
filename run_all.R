@@ -12,10 +12,10 @@
 
 source('header.R')
 
-#only run load if neccessary - clean
+#only run load if necessary - clean
 source("01_load.R")
 #Clips input to AOI - current options include:
-AOI <- readRDS('tmp/BC') #Province
+#AOI <- readRDS('tmp/BC') #Province
 #AOI <- ws %>% #Watershed
 #  filter(SUB_SUB_DRAINAGE_AREA_NAME == "Bulkley")
 #AOI <- EcoRegions %>% #EcoRegion

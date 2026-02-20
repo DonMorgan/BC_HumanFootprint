@@ -13,10 +13,11 @@
 #Clean Disturbance  Layer
 disturb_file <- file.path(spatialOutDir,"disturbance_sfR.tif")
 if (!file.exists(disturb_file)) {
-    #disturbance_sf<-readRDS(file=dist_file)
+    #disturbance_sf_in<-readRDS(file='tmp/disturbance_sf')
+
 
   #Fasterize disturbance subgroup
-  disturbance_Tbl <- st_set_geometry(disturbance_sf, NULL) %>%
+  disturbance_Tbl <- st_set_geometry(disturbance_sf_in, NULL) %>%
     count(CEF_DISTURB_SUB_GROUP, CEF_DISTURB_GROUP)
   #Fix non-unique sub group codes
   disturbance_sf <- disturbance_sf_in %>%
@@ -40,57 +41,76 @@ if (!file.exists(disturb_file)) {
   Unique_disturb<-unique(disturbance_sf$disturb)
   AreaDisturbance_LUT<-data.frame(disturb_Code=1:length(Unique_disturb),disturb=Unique_disturb)
 
-
-  #Write out LUT and populate with resistance weights and source scores in 02_clean_Area_WeightAssign.R
+   #Write out LUT and populate with resistance weights and source scores in 02_clean_Area_WeightAssign.R
   WriteXLS(AreaDisturbance_LUT,file.path(DataDir,'AreaDisturbance_LUT.xlsx'))
 
 AreaDisturbance_LUT<-data.frame(read_excel(file.path(DataDir,'AreaDisturbance_LUTH.xlsx'))) %>%
-    dplyr::select(disturb,ID=disturb_Code,Resistance,RawWt, NatWt,ProvWt,ProvWtAlpine,NAWt,BinaryHF)
+    dplyr::select(disturb,ID=disturb_Code,ProvWt.1,ProvWt.2,Resistance,RawWt, NatWt,ProvWt,ProvWtAlpine,NAWt,BinaryHF)
 
   disturbance_sfR1 <- disturbance_sf %>%
     left_join(AreaDisturbance_LUT) %>%
     st_cast("MULTIPOLYGON")
+write_sf(disturbance_sfR1, file.path(spatialOutDir,'disturbance_sfR1.gpkg'), overwrite=TRUE)
 
-  disturbance_sfR<- fasterize(disturbance_sfR1, BCr, field="ID")
+BCrBuffd<-raster(file.path(spatialOutDir,'BCrBuff.tif'), overwrite=T)
+  disturbance_sfR<- fasterize(disturbance_sfR1, BCrBuffd, field="ID")
 
   saveRDS(disturbance_sfR,file='tmp/disturbance_sfR')
   writeRaster(disturbance_sfR, filename=file.path(spatialOutDir,'disturbance_sfR'), format="GTiff", overwrite=TRUE)
 
 } else {
+  #disturbance_sfR1<-st_read(file.path(spatialOutDir,'disturbance_sfR1.gpkg'))
   disturbance_sfR<-raster(file.path(spatialOutDir,'disturbance_sfR.tif'))
   AreaDisturbance_LUT<-data.frame(read_excel(file.path(DataDir,'AreaDisturbance_LUTH.xlsx'))) %>%
-    dplyr::select(disturb,ID=disturb_Code,Resistance,RawWt, NatWt,ProvWt,BinaryHF)
+    dplyr::select(disturb,ID=disturb_Code,ProvWt.1,Resistance,RawWt, NatWt,ProvWt,BinaryHF)
 }
 
+#Join with EP data
+EP_disturbance_sfR<-raster(file.path(spatialOutDir,'EP_disturbance_sfR.tif'))
+All_disturbance_sfR<-merge(disturbance_sfR,EP_disturbance_sfR)
+writeRaster(All_disturbance_sfR, filename=file.path(spatialOutDir,'All_disturbance_sfR'), format="GTiff", overwrite=TRUE)
 
 #Provincial weights
 disturbance_WP_file <- file.path(spatialOutDir,"disturbance_WP.tif")
 if (!file.exists(disturbance_WP_file)) {
-  disturbance_WP<-subst(rast(file.path(spatialOutDir,'disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$ProvWt)
-  writeRaster(disturbance_WP, file.path(spatialOutDir,'disturbance_WP.tif'), overwrite=TRUE)
-  #Modified Provincial - Alpine adjustment, bump to Slope
-  disturbance_WPProvWtPASLp40<-subst(rast(file.path(spatialOutDir,'disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$ProvWtAlpine)
-  writeRaster(disturbance_WPProvWtPASLp40, file.path(spatialOutDir,'disturbance_WPProvWtPASLp40.tif'), overwrite=TRUE)
+  disturbance_WP.1<-subst(rast(file.path(spatialOutDir,'All_disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$ProvWt.1)
+  writeRaster(disturbance_WP.1, file.path(spatialOutDir,'disturbance_WP.1.tif'), overwrite=TRUE)
+
+  disturbance_WP.2<-subst(rast(file.path(spatialOutDir,'All_disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$ProvWt.2)
+  writeRaster(disturbance_WP.2, file.path(spatialOutDir,'disturbance_WP.2.tif'), overwrite=TRUE)
+
   #Raw weights
-  disturbance_WR<-subst(rast(file.path(spatialOutDir,'disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$RawWt)
+  disturbance_WR<-subst(rast(file.path(spatialOutDir,'All_disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$RawWt)
   writeRaster(disturbance_WR, file.path(spatialOutDir,'disturbance_WR.tif'), overwrite=TRUE)
+
   #National weights
-  disturbance_WN<-subst(rast(file.path(spatialOutDir,'disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$NatWt)
+  disturbance_WN<-subst(rast(file.path(spatialOutDir,'All_disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$NatWt)
   writeRaster(disturbance_WN, file.path(spatialOutDir,'disturbance_WN.tif'), overwrite=TRUE)
-  #NA weights
-  disturbance_WPNa<-subst(rast(file.path(spatialOutDir,'disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$NAWt)
-  writeRaster(disturbance_WPNa, file.path(spatialOutDir,'disturbance_WPNa.tif'), overwrite=TRUE)
+
 
 }else{
-  disturbance_WP<-raster(file.path(spatialOutDir,'disturbance_WP.tif'))
-  disturbance_WPProvWtPASLp40<-raster(file.path(spatialOutDir,'disturbance_WPProvWtPASLp40.tif'))
+  disturbance_WP.1<-raster(file.path(spatialOutDir,'disturbance_WP.1.tif'))
   disturbance_RP<-raster(file.path(spatialOutDir,'disturbance_RP.tif'))
   disturbance_NP<-raster(file.path(spatialOutDir,'disturbance_NP.tif'))
-  disturbance_WPNa<-raster(file.path(spatialOutDir,'disturbance_NPNa.tif'))
 }
 
 
+
+
+
+
+
+
+
+
+
 ##############
+#Old Provincial
+disturbance_WP<-subst(rast(file.path(spatialOutDir,'disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$ProvWt)
+writeRaster(disturbance_WP, file.path(spatialOutDir,'disturbance_WP.tif'), overwrite=TRUE)
+#NA weights
+disturbance_WPNa<-subst(rast(file.path(spatialOutDir,'disturbance_sfR.tif')), AreaDisturbance_LUT$ID,to=AreaDisturbance_LUT$NAWt)
+writeRaster(disturbance_WPNa, file.path(spatialOutDir,'disturbance_WPNa.tif'), overwrite=TRUE)
 
 #Binary Version
 disturbanceB_WP<-subs(raster(file.path(spatialOutDir,'disturbance_sfR.tif')), AreaDisturbance_LUT, by='ID',which='BinaryHF')

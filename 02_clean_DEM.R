@@ -42,12 +42,11 @@ DEM2300rP<-terra::resample(DEMP,rast(BCr),method="cubic") %>%
   crop(rast(BCr), mask=TRUE)
 writeRaster(DEM2300rP, filename=file.path(spatialOutDir,paste0('DEM2300rP.tif')), overwrite=TRUE)
 
-#Slope >30
+#Slope
 Slope <- terrain(DEMP, v = "slope", unit = "degrees")
-Slope30rP<-terra::resample(Slope,rast(BCr),method="cubic") %>%
-  crop(rast(BCr), mask=TRUE)
-writeRaster(Slope30rP, filename=file.path(spatialOutDir,paste0('rSlope30rP.tif')), overwrite=TRUE)
-
+SloperP<-terra::resample(Slope,rast(BCr),method="cubic") %>%
+  crop(BCrT, mask=TRUE)
+writeRaster(SloperP, filename=file.path(spatialOutDir,paste0('SloperP.tif')), overwrite=TRUE)
 
 
 #######

@@ -14,6 +14,7 @@ library(ggnewscale)
 library(viridis)
 library(stars)
 library(terra)
+library(tidyr)
 #library(RCurl)
 
 options(scipen=999)
@@ -30,7 +31,8 @@ RoadsDir<-file.path(SpatialDir,'roads')
 DisturbDir<-file.path(SpatialDir,'disturb')
 DataDir <- 'data'
 #Change this to a local path for storing footprint data as input to conservation connectivity model
-CorrDir<- file.path('/Users/dmorgan/Sync/_dev/Biodiversity/BC_ConservationConnectivity/data/spatial')
+CorrDir<- file.path('/Users/dmorgan/Sync/_dev/Biodiversity/BC_Connectivity/data/spatial')
+CorrDirOut<- file.path('/Users/dmorgan/Sync/_dev/Biodiversity/BC_Connectivity/out/spatial/ConnData')
 #Local directory of GIS files such as HillShade for plotting
 #GISLibrary<- file.path('/Users/dmorgan/ProjectLibrary/Library/GISFiles/BC')
 GoogleDir<-file.path('/Users/dmorgan/Google Drive/Shared drives/Provincial Connectivity/Data Wrangling/Required Spatial Files')

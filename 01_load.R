@@ -34,14 +34,46 @@ if (!file.exists(BCr_file)) {
   write_stars(BCr_S,dsn=file.path(spatialOutDir,'BCr_S.tif'))
   writeRaster(BCr, filename=BCr_file, format="GTiff", overwrite=TRUE)
   writeRaster(ProvRast, filename=file.path(spatialOutDir,'ProvRast'), format="GTiff", overwrite=TRUE)
+
+  #Generate a buffer around BC
+  BC_BB <- st_bbox(BC)
+  #Make a bounding box x% larger than width
+  BCBuff_l<-round((BC_BB$xmax-BC_BB$xmin)*0.2,0)
+  BCBuff <- BC %>%
+    st_simplify(dTolerance = 1000) %>%
+    st_buffer(dist=BCBuff_l)
+  st_write(BCBuff,file.path(spatialOutDir,'BCBuff.gpkg'))
+
+  #Generate a raster 20% larger than ProvRast
+  ProvRastBT<-rast(ProvRast)
+  extProv<-ext(ProvRastBT)
+  new_ext<-extProv * 1.4
+  # Extend the raster to the new extent
+  ProvRastB <- extend(ProvRastBT, new_ext)
+  writeRaster(ProvRastB,file.path(spatialOutDir,'ProvRastB.tif'),overwrite=T)
+
+  #Use ProvRastB to create a new Provincial buffer
+  BCBuff<-st_read(file.path(spatialOutDir,'BCBuff.gpkg'))
+  BCrBuff <- rasterize(vect(BCBuff),ProvRastB)
+  writeRaster(BCrBuff,file.path(spatialOutDir,'BCrBuff.tif'), overwrite=T)
+  BCrB_S <-st_as_stars(BCrBuff)
+
 } else {
   BCr <- raster(BCr_file)
+  BCrT <- rast(BCr_file)
   ProvRast<-raster(file.path(spatialOutDir,'ProvRast.tif'))
-  BCr_S <- read_stars(file.path(spatialOutDir,'BCr_S.tif'))
+  #BCr_S <- read_stars(file.path(spatialOutDir,'BCr_S.tif'))
+  ProvRastB<-rast(file.path(spatialOutDir,'ProvRastB.tif'))
   BC <-readRDS('tmp/BC')
+  BCBuff<-st_read(file.path(spatialOutDir,'BCBuff.gpkg'))
+  BCrBuff <- rasterize(vect(BCBuff),ProvRastB)
+  BCrB_S <-st_as_stars(BCrBuff)
 }
 
+message('Breaking')
+break
 
+############
 EcoR<-bcdc_get_data("WHSE_TERRESTRIAL_ECOLOGY.ERC_ECOREGIONS_SP")
 write_sf(EcoR, file.path(spatialOutDir,"EcoR.gpkg"))
 
@@ -124,10 +156,13 @@ Hydro_in <- read_sf(Hydro_gdb, layer = "HydroRIVERS_v10_na") %>%
   st_transform(Prov_crs)
 #Hydro_sf_intersect <- Hydro_in %>%
 #  st_intersects(BC)
-Hydro_sf <- st_join(Hydro_in, BC, join = st_intersects)
-HydroR<- rasterize(vect(Hydro_sf), rast(BCr_file), field="DIS_AV_CMS") %>%
-  crop(rast(BCr), mask=TRUE)
+Hydro_sf <- st_join(Hydro_in, BCBuff, join = st_intersects)
+HydroR<- rasterize(vect(Hydro_sf), BCrBuff, field="DIS_AV_CMS") %>%
+  crop(BCrBuff, mask=TRUE)
 writeRaster(HydroR,file.path(spatialOutDir,'HydroR.tif'),overwrite=TRUE)
+
+Rivers<-bcdc_get_data("WHSE_BASEMAPPING.FWA_RIVERS_POLY")
+write_sf(Rivers, file.path(spatialOutDir,"Rivers.gpkg"))
 
 Invasives<-bcdc_get_data("WHSE_FOREST_VEGETATION.IBC_INVASIVE_SPECIES_OBS_SP")
 write_sf(Invasives, file.path(spatialOutDir,"Invasives.gpkg"))
@@ -144,6 +179,28 @@ Pither_resistance_surface<-rast(file.path(SpatialDir,'Pither_Movement_Cost_Layer
   project(Prov_crs,method='near') #compare with max?
 writeRaster(Pither_resistance_surface,file.path(SpatialDir,'Pither_resistance_surface.tif'),overwrite=TRUE)
 Pither_resistance_surface<-rast(file.path(SpatialDir,'Pither_resistance_surface.tif'))
+
+Lakes<-bcdc_get_data("WHSE_BASEMAPPING.FWA_LAKES_POLY")
+write_sf(Lakes, file.path(spatialOutDir,"Lakes.gpkg"))
+
+Glaciers<-bcdc_get_data("WHSE_BASEMAPPING.GBA_GLACIERS_SP")
+write_sf(Glaciers, file.path(spatialOutDir,"Glaciers.gpkg"))
+
+IceMasses<-bcdc_get_data("WHSE_BASEMAPPING.TRIM_EBM_ICEMASSES")
+write_sf(IceMasses, file.path(spatialOutDir,"IceMasses.gpkg"))
+
+KBLUP_ConnectLegal<-bcdc_get_data("WHSE_LAND_USE_PLANNING.RMP_PLAN_LEGAL_POLY_SVW")
+write_sf(KBLUP_ConnectLegal, file.path(spatialOutDir,"KBLUP_ConnectLegal.gpkg"))
+
+KBLUP_ConnectNonLegal<-bcdc_get_data("WHSE_LAND_USE_PLANNING.RMP_PLAN_NON_LEGAL_POLY_SVW")
+write_sf(KBLUP_ConnectNonLegal, file.path(spatialOutDir,"KBLUP_ConnectNonLegal.gpkg"))
+
+wshd<-bcdc_get_data("WHSE_LAND_USE_PLANNING.RMP_PLAN_NON_LEGAL_POLY_SVW")
+write_sf(wshd, file.path(spatialOutDir,"wshd.gpkg"))
+
+
+
+
 
 message('Breaking')
 break

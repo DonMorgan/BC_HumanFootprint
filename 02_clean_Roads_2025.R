@@ -74,20 +74,24 @@ if (!file.exists(roads_file)) {
 
   #Add new attribute that holds the use classification Road unclassified
   roads_sf <- roads_sf_1 %>%
-    mutate(RoadUse = case_when((DRA_ROAD_CLASS %in% HighWayCls & DRA_ROAD_SURFACE %in% PavedSurf) ~ 4,
+    mutate(RoadUse = case_when(!(DRA_ROAD_SURFACE %in% c('overgrown',"decommissioned")) &
+                                 (DRA_ROAD_CLASS %in% HighWayCls & DRA_ROAD_SURFACE %in% PavedSurf) ~ 4,
                                ((DRA_ROAD_CLASS %in% TwoLaneMajorCls & DRA_ROAD_SURFACE %in% PavedSurf) |
-                                #  ((DRA_ROAD_CLASS %in% TwoLaneMajorCls) |
-                                (DRA_ROAD_CLASS %in% c("Road arterial minor","Road highway minor","Road collector minor","Road runway")) |
-                               (DRA_ROAD_CLASS %in% HighWayCls & DRA_ROAD_SURFACE %in% NonPavedSurf)) ~ 3,
-                               ((DRA_ROAD_CLASS %in% TwoLaneMinorCls & DRA_ROAD_SURFACE %in% NonPavedSurf) |
-                               (DRA_ROAD_CLASS %in% TwoLaneMinorCls | DRA_ROAD_SURFACE == "loose") & !is.na(DRA_ROAD_NAME_FULL) |
-                               (DRA_ROAD_CLASS %in% TwoLaneMinorCls & DRA_ROAD_SURFACE %in% PavedSurf)) ~ 2,
+                                  #  ((DRA_ROAD_CLASS %in% TwoLaneMajorCls) |
+                                  (DRA_ROAD_CLASS %in% c("Road arterial minor","Road highway minor","Road collector minor","Road runway")) |
+                                  (DRA_ROAD_CLASS %in% HighWayCls & DRA_ROAD_SURFACE %in% NonPavedSurf)) ~ 3,
+
+                               (!(DRA_ROAD_SURFACE %in% c('overgrown',"decommissioned")) &
+                                  ((DRA_ROAD_CLASS %in% TwoLaneMinorCls & DRA_ROAD_SURFACE %in% NonPavedSurf) |
+                                     (DRA_ROAD_CLASS %in% TwoLaneMinorCls | DRA_ROAD_SURFACE == "loose") & !is.na(DRA_ROAD_NAME_FULL) |
+                                     (DRA_ROAD_CLASS %in% TwoLaneMinorCls & DRA_ROAD_SURFACE %in% PavedSurf))) ~ 2,
                                #(DRA_ROAD_CLASS %in% TwoLaneMajorCls & DRA_ROAD_SURFACE %in% NonPavedSurf)) ~ 2,
+
                                #((DRA_ROAD_CLASS %in% TwoLaneMinorCls | DRA_ROAD_SURFACE == "loose") & is.na(DRA_ROAD_NAME_FULL)|
-                                ((DRA_ROAD_CLASS %in% SingleMinorCls | DRA_ROAD_SURFACE %in% MinorSurf) |
-                                (DRA_ROAD_SURFACE %in% MinorSurf & is.na(DRA_ROAD_NAME_FULL)) |
-                                (is.na(DRA_ROAD_CLASS) & is.na(DRA_ROAD_SURFACE))) ~ 1,
-                               TRUE ~ 5)) # all the rest are medium use
+                               ((DRA_ROAD_CLASS %in% SingleMinorCls | DRA_ROAD_SURFACE %in% MinorSurf) |
+                                  (DRA_ROAD_SURFACE %in% MinorSurf & is.na(DRA_ROAD_NAME_FULL)) |
+                                  (is.na(DRA_ROAD_CLASS) & is.na(DRA_ROAD_SURFACE))) ~ 1,
+                               TRUE ~ 99)) # all the rest
 
   #Check the assignment
   Rd_Tbl <- st_set_geometry(roads_sf, NULL) %>%
@@ -109,24 +113,24 @@ if (!file.exists(roads_file)) {
     dplyr::filter(RoadUse==4) %>%
     st_buffer(dist=300) %>%
     dplyr::select(RoadUse)
-  HighwayR<-rasterize(vect(Highway), rast(BCr_file), field="RoadUse") %>%
-    crop(rast(BCr), mask=TRUE)
+  HighwayR<-rasterize(vect(Highway), ProvRastB, field="RoadUse") %>%
+    crop(BCrBuff, mask=TRUE)
   writeRaster(HighwayR, file.path(spatialOutDir,'HighwayR.tif'), overwrite=TRUE)
 
   TwoLaneMajor<-roads_sf %>%
     dplyr::filter(RoadUse==3) %>%
     st_buffer(dist=150) %>%
     dplyr::select(RoadUse)
-  TwoLaneMajorR<-rasterize(vect(TwoLaneMajor), rast(BCr_file), field="RoadUse") %>%
-    crop(rast(BCr), mask=TRUE)
+  TwoLaneMajorR<-rasterize(vect(TwoLaneMajor), ProvRastB, field="RoadUse") %>%
+    crop(BCrBuff, mask=TRUE)
   writeRaster(TwoLaneMajorR, file.path(spatialOutDir,'TwoLaneMajorR.tif'), overwrite=TRUE)
 
   TwoLaneMinor<-roads_sf %>%
     dplyr::filter(RoadUse==2) %>%
     st_buffer(dist=150) %>%
     dplyr::select(RoadUse)
-  TwoLaneMinorR<-rasterize(vect(TwoLaneMinor), rast(BCr_file), field="RoadUse") %>%
-    crop(rast(BCr), mask=TRUE)
+  TwoLaneMinorR<-rasterize(vect(TwoLaneMinor), ProvRastB, field="RoadUse") %>%
+    crop(BCrBuff, mask=TRUE)
   writeRaster(TwoLaneMinorR, file.path(spatialOutDir,'TwoLaneMinorR.tif'), overwrite=TRUE)
 
   SingleLaneMinor<-roads_sf %>%
@@ -141,7 +145,7 @@ if (!file.exists(roads_file)) {
  #Use Stars to rasterize according to RoadUse and save as a tif
   #terra::rast struggles with the complexity of the single lane road layer
   #first st_rasterize needs a template to 'burn' the lines onto
-  template = BCr_S
+  template = BCrB_S
   template[[1]][] = NA
   SingleLaneMinorR<-stars::st_rasterize(SingleLaneMinor[,"RoadUse"], template)
   write_stars(SingleLaneMinorR,dsn=file.path(spatialOutDir,'SingleLaneMinorR.tif'))
@@ -155,6 +159,12 @@ if (!file.exists(roads_file)) {
 
 } else {
   #Read in raster roads with values 0-none, 1-high use, 2&3-moderate use, 4-low use)
-  roadsR<-raster(file.path(spatialOutDir,'roadsSR.tif'))
+  roadsR<-raster(file.path(spatialOutDir,'roadsR.tif'))
 }
+
+#Join Extra Provincial data to Provincial data
+roadsR<-rast(file.path(spatialOutDir,'roadsR.tif'))
+RoadsBR<-rast(file.path(spatialOutDir,'RoadsBR.tif'))
+roadsAll<-terra::merge(roadsR,RoadsBR)
+writeRaster(roadsAll, file.path(spatialOutDir,'roadsAll.tif'), overwrite=TRUE)
 

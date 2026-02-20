@@ -21,14 +21,7 @@ Pither_resistance_surface<-rast(file.path(SpatialDir,'Pither_Movement_Cost_Layer
 writeRaster(Pither_resistance_surface,file.path(SpatialDir,'Pither_resistance_surface.tif'),overwrite=TRUE)
 Pither_resistance_surface<-rast(file.path(SpatialDir,'Pither_resistance_surface.tif'))
 
-#Stitch with Provincial Resistance
-#Generate a buffer around BC
-BC_BB <- st_bbox(BC)
-#Make a bounding box x% larger than width
-BCBuff_l<-round((BC_BB$xmax-BC_BB$xmin)*0.2,0)
-BCBuff <- BC %>%
-  st_simplify(dTolerance = 1000) %>%
-  st_buffer(dist=BCBuff_l)
+
 
 #Clip the Pither resistance
 #Clip to BC and resample to BC resolution (100m)

@@ -11,11 +11,11 @@
 # See the License for the specific language governing permissions and limitations under the License.
 
 #Output the rasters to the data/spatial directory of the conservation connectivity  repo (BC_ConservationConnectivity)
-writeRaster(Pither_resistance_surfaceB, file.path(CorrDir,'Pither_resistance_surfaceB.tif'), overwrite=TRUE)
+#writeRaster(Pither_resistance_surfaceB, file.path(CorrDir,'Pither_resistance_surfaceB.tif'), overwrite=TRUE)
 writeRaster(resistance_surfaceR, file.path(CorrDir,'resistance_surfaceR.tif'), overwrite=TRUE)
-writeRaster(resistance_surfaceN, file.path(CorrDir,'resistance_surfaceN.tif'), overwrite=TRUE)
 writeRaster(resistance_surfaceP, file.path(CorrDir,'resistance_surfaceP.tif'), overwrite=TRUE)
-writeRaster(resistance_surface_PASlp40, file.path(CorrDir,'resistance_surface_PASlp40.tif'), overwrite=TRUE)
+writeRaster(resistance_surfaceP2, file.path(CorrDir,'resistance_surfaceP2.tif'), overwrite=TRUE)
+writeRaster(resistance_surfaceN, file.path(CorrDir,'resistance_surfaceN.tif'), overwrite=TRUE)
 #writeRaster(resistance_surfaceP_NA, file.path(CorrDir,'resistance_surfaceP_NA.tif'), overwrite=TRUE)
 
 #writeRaster(roads_W, filename=file.path(CorrDir,'roads_W.tif'), format="GTiff", overwrite=TRUE)
