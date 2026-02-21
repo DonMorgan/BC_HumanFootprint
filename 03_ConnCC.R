@@ -56,7 +56,7 @@ ConCC_Assign_LUT<-pivot_longer(ConnCC_LUT, cols=c('VeryLow','Low','Mod','High','
 #Assign values from LUT to new raster
 ConCC<-classify(ConCCc,ConCC_Assign_LUT)
 plot(ConCC)
-writeRaster(ConCC, filename=file.path(spatialOutDir,paste0('ConCCs.tif')), overwrite=TRUE)
+writeRaster(ConCC, filename=file.path(spatialOutDir,paste0('ConCC.tif')), overwrite=TRUE)
 
 
 
