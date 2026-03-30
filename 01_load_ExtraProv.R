@@ -58,6 +58,7 @@ EP_pipelinesR<-rasterize(vect(EP_pipelines), ProvRastB, field="pipeline") %>%
   crop(BCrBuff, mask=TRUE)
 writeRaster(EP_pipelinesR, file.path(spatialOutDir,'EP_pipelinesR.tif'), overwrite=TRUE)
 
+#Range
 Range_final<-st_read(file.path(SpatialDir,'ExtraProvincialData/BLM_Natl_Grazing_Pasture.gpkg')) %>%
   st_transform(st_crs(BCBuff))
 write_sf(Range_final,file.path(SpatialDir,'ExtraProvincialData/Range_final.gpkg'), overwrite=T)

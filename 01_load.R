@@ -195,9 +195,15 @@ write_sf(KBLUP_ConnectLegal, file.path(spatialOutDir,"KBLUP_ConnectLegal.gpkg"))
 KBLUP_ConnectNonLegal<-bcdc_get_data("WHSE_LAND_USE_PLANNING.RMP_PLAN_NON_LEGAL_POLY_SVW")
 write_sf(KBLUP_ConnectNonLegal, file.path(spatialOutDir,"KBLUP_ConnectNonLegal.gpkg"))
 
-wshd<-bcdc_get_data("WHSE_LAND_USE_PLANNING.RMP_PLAN_NON_LEGAL_POLY_SVW")
+wshd.1<-bcdc_get_data("WHSE_LAND_USE_PLANNING.RMP_PLAN_NON_LEGAL_POLY_SVW")
+wshd<-wshd.1 %>%
+  mutate(wshd_id=as.numeric(rownames(.))) %>%
+  mutate(area_Ha=units::set_units(st_area(.),ha)) %>%
+  units::drop_units(.) %>%
+  dplyr::select(wshd_id,area_Ha) %>%
+  st_make_valid()
+unique(st_is_valid(wshd))
 write_sf(wshd, file.path(spatialOutDir,"wshd.gpkg"))
-
 
 
 
@@ -205,22 +211,4 @@ write_sf(wshd, file.path(spatialOutDir,"wshd.gpkg"))
 message('Breaking')
 break
 
-############
-
-
-##########################
-#Layers for doing AOI for testing and printing
-
-EcoS<-bcmaps::ecosections()
-
-#EcoRegions
-EcoRegions<-bcmaps::ecoregions()
-
-#Watersheds
-ws <- get_layer("wsc_drainages", class = "sf") %>%
-  dplyr::select(SUB_DRAINAGE_AREA_NAME, SUB_SUB_DRAINAGE_AREA_NAME) %>%
-  dplyr::filter(SUB_DRAINAGE_AREA_NAME %in% c("Nechako", "Skeena - Coast"))
-st_crs(ws)<-3005
-saveRDS(ws, file = "tmp/ws")
-write_sf(ws, file.path(spatialOutDir,"ws.gpkg"))
 
